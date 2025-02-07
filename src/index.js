@@ -3,8 +3,7 @@ import path from 'path'
 import { __dirname } from './path.js'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
-import {create} from 'express-handlebars'
-//import FileStore from 'session-file-store'
+import { create } from 'express-handlebars'
 import MongoStore from 'connect-mongo'
 import sessionRouter from './routes/sessions.routes.js'
 import mongoose from 'mongoose'
@@ -13,111 +12,128 @@ const app = express()
 const PORT = 8080
 const hbs = create()
 
-//const fileStorage = new FileStore(session)
+// Middleware
 app.use(express.json())
-app.use(cookieParser("CoderSecret")) //Si agrego contraseña "firmo" las cookies
+app.use(express.urlencoded({ extended: true })) // Agregado para recibir datos de formularios
+app.use(cookieParser("CoderSecret")) 
+
+// Conectar a MongoDB
+const connectDB = async () => {
+    try {
+        await mongoose.connect("mongodb+srv://sebafloress:OE34HpJkXyJkdBET@backend2.cdkic.mongodb.net/?retryWrites=true&w=majority&appName=backend2");
+        console.log("✅ DB is connected");
+    } catch (error) {
+        console.error("❌ Error al conectarme a DB:", error.message);
+        process.exit(1); // Detener la app si hay error
+    }
+};
+
+// Configuración de sesiones con MongoDB
 app.use(session({
-    //ttl Time to Live tiempo de vida (segundos)
-    //retries: Cantidad de veces que el servidor va a intentar leer ese archivo
-    //store: new fileStorage({path: './src/sessions', ttl: 10, retries: 1 }),
     store: MongoStore.create({
-        mongoUrl: "mongodb+srv://franciscopugh01:@cluster0.w0js7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
-        mongoOptions: {},
+        mongoUrl: "mongodb+srv://sebafloress:OE34HpJkXyJkdBET@backend2.cdkic.mongodb.net/?retryWrites=true&w=majority&appName=backend2",
         ttl: 15
     }),
     secret: 'SessionSecret',
-    resave: true,
-    saveUninitialized: true
-}))
+    resave: false,
+    saveUninitialized: false
+}));
 
-mongoose.connect("mongodb+srv://franciscopugh01:@cluster0.w0js7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
-.then(() => console.log("DB is connected"))
-.catch((e) => console.log("Error al conectarme a DB:", e))
-
+// Configuración de Handlebars
 app.engine('handlebars', hbs.engine)
 app.set('view engine', 'handlebars')
-app.set('views', path.join(__dirname, 'views')) //Concateno evitando erroes de / o \
+app.set('views', path.join(__dirname, 'views/templates'))
 
-//Rutas
-app.use('/public', express.static(__dirname + '/public')) //Concateno rutas
+
+// Rutas
+app.use('/public', express.static(__dirname + '/public'))
 app.use('/api/sessions', sessionRouter)
 
-app.listen(PORT, () => {
-    console.log(`Server on port ${PORT}`)
-})
+// Nueva ruta para renderizar home.handlebars
+app.get('/', (req, res) => {
+    res.render('home', { title: "Inicio", message: "Bienvenido al servidor 🚀" });
+});
 
 
-const auth = (req,res,next) => {
-    if(req.session?.email == "f@f.com") {
-        return next() //Continuo con la ejecucion normal
+
+// Rutas
+app.use('/public', express.static(__dirname + '/public'))
+app.use('/api/sessions', sessionRouter)
+
+const auth = (req, res, next) => {
+    if (req.session?.email === "f@f.com") {
+        return next();
     } else {
-        return res.status(401).send("Eror al autenticar usuario") //401 error de autenticacion
+        return res.status(401).send("Error al autenticar usuario");
     }
-}
+};
 
+// Creación de cookies
+app.get('/setCookie', (req, res) => {
+    res.status(200).cookie('coderCookie', "Esta es mi primera cookie", { maxAge: 100000 }).send("Cookie creada");
+});
 
-//Creacion de una cookie
-app.get('/setCookie', (req,res) => {
-    //Devuelvo como resultado una cookie
-    res.status(200).cookie('coderCookie', "Esta es mi primera cookie", {maxAge: 100000}).send("Cookie creada")
-})
+app.get('/setSignedCookie', (req, res) => {
+    res.status(200).cookie('coderCookieSigned', "Esta es mi primera cookie firmada", { maxAge: 1000000, signed: true }).send("Cookie creada");
+});
 
-//Crear una cookie si firmada
-app.get('/setSignedCookie', (req,res) => {
-    //Devuelvo como resultado una cookie
-    res.status(200).cookie('coderCookieSigned', "Esta es mi primera cookie firmada", {maxAge: 1000000, signed: true}).send("Cookie creada")
-})
+// Consultar cookies
+app.get('/getCookie', (req, res) => {
+    res.status(200).send(req.cookies);
+});
 
-//Consultar una cookie
-app.get('/getCookie', (req,res) => {
-    res.status(200).send(req.cookies)//Devuelvo todas las cookies presentes en mi navegador
-})
+app.get('/getCookieSigned', (req, res) => {
+    res.status(200).send(req.signedCookies);
+});
 
-//Consultar una cookie solamente con firma
-app.get('/getCookieSigned', (req,res) => {
-    res.status(200).send(req.signedCookies)//Devuelvo todas las cookies presentes en mi navegador que presenten firma
-})
+// Eliminar cookies
+app.get('/deleteCookie', (req, res) => {
+    res.status(200).clearCookie("coderCookie").send("Cookie eliminada");
+});
 
-//Eliminar una cookie
-app.get('/deleteCookie', (req,res) => {
-    res.status(200).clearCookie("coderCookie").send("Cookie eliminada")
-})
-
-//Creo una sesion
-app.get('/session', (req,res) => {
-    if(req.session.counter) {
-        req.session.counter++
-        res.status(200).send(`Ingresaste un total de ${req.session.counter} veces`)
+// Crear sesión
+app.get('/session', (req, res) => {
+    if (req.session.counter) {
+        req.session.counter++;
+        res.status(200).send(`Ingresaste un total de ${req.session.counter} veces`);
     } else {
-        req.session.counter = 1
-        res.status(200).send("Bienvenido/a!")
+        req.session.counter = 1;
+        res.status(200).send("Bienvenido/a!");
     }
-})
+});
 
-//Eliminar una sesion
-app.get('/logout', (req,res) => {
+// Logout (destruir sesión)
+app.get('/logout', (req, res) => {
     req.session.destroy((e) => {
-        if(e) {
-            res.status(500).send(e)
+        if (e) {
+            res.status(500).send(e);
         } else {
-            res.status(200).send("Logout")
+            res.status(200).send("Logout exitoso");
         }
-    })
-})
+    });
+});
 
-app.get('/login', (req,res) => {
-    const {email, password} = req.body
+// Cambié `/login` a `POST` ya que se envían credenciales en el body
+app.post('/login', (req, res) => {
+    const { email, password } = req.body;
 
-    if((email == "f@f.com" && password == "1234") || (email == "pepe@pepe.com" && password == "1234")) {
-        req.session.email = email
-        req.session.admin = true
-        res.status(200).send("Usuario logueado")
+    if ((email === "f@f.com" && password === "1234") || (email === "pepe@pepe.com" && password === "1234")) {
+        req.session.email = email;
+        req.session.admin = true;
+        res.status(200).send("Usuario logueado");
     } else {
-        res.status(400).send("Credenciales no validas")
+        res.status(400).send("Credenciales no válidas");
     }
-})
+});
 
-app.get('/private', auth ,(req,res) => {
-    res.status(200).send("Contenido de f@f.com")
-})
+// Ruta privada
+app.get('/private', auth, (req, res) => {
+    res.status(200).send("Contenido de f@f.com");
+});
 
+// Conectar a MongoDB y luego iniciar el servidor
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+});
