@@ -1,4 +1,5 @@
-import express from 'express'
+import passport from 'passport';
+import passportConfig from './config/passport.config.js'; // Importar configuración de Passport
 import path from 'path'
 import { __dirname } from './path.js'
 import cookieParser from 'cookie-parser'
@@ -7,10 +8,15 @@ import { create } from 'express-handlebars'
 import MongoStore from 'connect-mongo'
 import sessionRouter from './routes/sessions.routes.js'
 import mongoose from 'mongoose'
+import express from 'express'
 
 const app = express()
 const PORT = 8080
-const hbs = create()
+const hbs = create({
+    defaultLayout: "main",
+    layoutsDir: path.join(__dirname, "views/layout"),  // Ruta correcta
+    partialsDir: path.join(__dirname, "views/partials") // Ruta de los parciales
+});
 
 // Middleware
 app.use(express.json())
@@ -44,17 +50,33 @@ app.engine('handlebars', hbs.engine)
 app.set('view engine', 'handlebars')
 app.set('views', path.join(__dirname, 'views/templates'))
 
+// Inicializar Passport
+app.use(passport.initialize());
 
 // Rutas
 app.use('/public', express.static(__dirname + '/public'))
-app.use('/api/sessions', sessionRouter)
+app.use('/api/sessions', sessionRouter);
 
 // Nueva ruta para renderizar home.handlebars
 app.get('/', (req, res) => {
-    res.render('home', { title: "Inicio", message: "Bienvenido al servidor 🚀" });
+    const prods = {
+        docs: [
+            { title: 'Producto 1', description: 'Descripción del Producto 1', price: 100, _id: '1' },
+            { title: 'Producto 2', description: 'Descripción del Producto 2', price: 200, _id: '2' },
+            { title: 'Producto 3', description: 'Descripción del Producto 3', price: 300, _id: '3' }
+        ],
+        hasPrevPage: false,
+        hasNextPage: true,
+        prevPage: null,
+        nextPage: 2,
+        limit: 10,
+        pageNumbers: [
+            { number: 1, isCurrent: true },
+            { number: 2, isCurrent: false },
+        ]
+    };
+    res.render('home', { title: "Inicio", message: "Bienvenido al servidor 🚀", prods });
 });
-
-
 
 // Rutas
 app.use('/public', express.static(__dirname + '/public'))

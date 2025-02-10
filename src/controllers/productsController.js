@@ -7,7 +7,7 @@ export const getProducts = async(req,res) => {
         
         const pag = page !== undefined ? page : 1
         const limi = limit !== undefined || limit !== null ? limit : 10
-        //status: "true"
+        
         const filQuery = metFilter !== undefined ? {[metFilter]: filter} : {}
         const ordQuery = metOrder !== undefined ? {metOrder: ord} : {}
 
