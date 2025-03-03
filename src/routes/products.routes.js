@@ -9,4 +9,5 @@ productRouter.post('/', authorization("Admin"), createProduct)
 productRouter.put('/:pid', authorization("Admin"), updateProduct)
 productRouter.delete('/:pid', authorization("Admin"), deleteProduct)
 
+
 export default productRouter

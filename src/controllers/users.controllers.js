@@ -29,14 +29,14 @@ export const getUser = async (req,res) => {
 //Crear un usuario con nombre, email y edad pedidos via el req.body
 export const createUser = async (req,res) => {
     try {
-        const {name, email, age} = req.body
-        const message = await userModel.create({name, email, age})
-        res.status(201).send(message) //200 es OK, 201 es Created
+        const {name, email, age} = req.body;
+        await userModel.create({name, email, age});
+        res.redirect('/login'); // Redirigir a la página de inicio de sesión
     } catch(e) {
         console.log(e);
-        res.status(500).send(e)
+        res.status(500).send(e);
     }
-}
+};
 
 //Actualizar un usuario dado su ID
 export const updateUser = async (req,res) => {
